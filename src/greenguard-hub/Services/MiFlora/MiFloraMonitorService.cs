@@ -32,27 +32,27 @@ namespace greenguard_hub.Services.MiFlora
                     };
 
                     watcher.Received += OnAdvertisementReceived;
+
+                    Debug.WriteLine("Starting MiFlora watcher");
                     watcher.Start();
 
                     Thread.Sleep(10000);
 
+                    Debug.WriteLine("Stopping MiFlora watcher");
                     watcher.Stop();
 
                     foreach (DictionaryEntry entry in _miFloraDevices)
                     {
                         BluetoothLEDevice device = entry.Value as BluetoothLEDevice;
-
-                        if (ConnectAndRegister(device))
-                        {
-                        }
+                        ConnectAndReadData(device);
                     }
-
-                    Thread.Sleep(60000);
                 }
                 catch (Exception ex)
                 {
                     Debug.WriteLine($"Exception: {ex}");
                 }
+
+                Thread.Sleep(10000);
             }
         }
 
@@ -68,35 +68,76 @@ namespace greenguard_hub.Services.MiFlora
             }
         }
 
-        private static bool ConnectAndRegister(BluetoothLEDevice device)
+        private void ConnectAndReadData(BluetoothLEDevice device)
         {
-            bool result = false;
-
             var realtimeServiceUuidParsed = Guid.TryParseGuidWithDashes(MiFloraConstants.RealtimeServiceUuid, out var realtimeServiceUuid);
             var batteryAndFirmwareCharacteristicUuidParsed = Guid.TryParseGuidWithDashes(MiFloraConstants.BatteryAndFirmwareCharacteristicUuid, out var batteryAndFirmwareCharacteristicUuid);
+            var requestRealtimeReadCharacteristicUuidParsed = Guid.TryParseGuidWithDashes(MiFloraConstants.RequestRealtimeReadCharacteristicUuid, out var requestRealtimeReadCharacteristicUuid);
+            var realtimeDataCharacteristicUuidParsed = Guid.TryParseGuidWithDashes(MiFloraConstants.RealtimeDataCharacteristicUuid, out var realtimeDataCharacteristicUuid);
 
-            GattDeviceServicesResult sr = device.GetGattServicesForUuid(realtimeServiceUuid);
-            if (realtimeServiceUuidParsed && batteryAndFirmwareCharacteristicUuidParsed && sr.Status == GattCommunicationStatus.Success)
+            GattDeviceServicesResult realtimeService = device.GetGattServicesForUuid(realtimeServiceUuid);
+
+            if (realtimeServiceUuidParsed
+                && batteryAndFirmwareCharacteristicUuidParsed
+                && requestRealtimeReadCharacteristicUuidParsed
+                && realtimeDataCharacteristicUuidParsed
+                && realtimeService.Status == GattCommunicationStatus.Success)
             {
-                result = true;
-
                 Debug.WriteLine($"Connected to MiFlora device: {device.Name}");
 
-                foreach (GattDeviceService service in sr.Services)
+                foreach (GattDeviceService service in realtimeService.Services)
                 {
                     Console.WriteLine($"Service UUID {service.Uuid}");
 
-                    GattCharacteristicsResult cr = service.GetCharacteristicsForUuid(batteryAndFirmwareCharacteristicUuid);
+                    GattCharacteristicsResult batteryAndFirmwareCharacteristic = service.GetCharacteristicsForUuid(batteryAndFirmwareCharacteristicUuid);
 
-                    if (cr.Status == GattCommunicationStatus.Success)
+                    if (batteryAndFirmwareCharacteristic.Status == GattCommunicationStatus.Success)
                     {
-                        foreach (GattCharacteristic gc in cr.Characteristics)
+                        foreach (GattCharacteristic gc in batteryAndFirmwareCharacteristic.Characteristics)
                         {
+                            GattReadResult value = gc.ReadValue();
+
+                            if (value != null)
+                            {
+                                var batteryLevel = _miFloraService.GetBatteryLevel(value.Value);
+                                var firmwareVersion = _miFloraService.GetFirmwareVersion(value.Value);
+                                Debug.WriteLine($"Battery Level: {batteryLevel}");
+                                Debug.WriteLine($"Firmware Version: {firmwareVersion}");
+                            }
+                        }
+                    }
+
+                    GattCharacteristicsResult requestRealtimeReadCharacteristic = service.GetCharacteristicsForUuid(requestRealtimeReadCharacteristicUuid);
+
+                    if (requestRealtimeReadCharacteristic.Status == GattCommunicationStatus.Success)
+                    {
+                        foreach (GattCharacteristic gc in requestRealtimeReadCharacteristic.Characteristics)
+                        {
+                            Buffer requestRealtimeReadCommandBuffer = new(MiFloraConstants.RequestRealtimeReadCommand);
+                            GattWriteResult writeResult = gc.WriteValueWithResult(requestRealtimeReadCommandBuffer, GattWriteOption.WriteWithResponse);
+
+                            Debug.WriteLine("Executed realtime read command");
+                        }
+                    }
+
+                    GattCharacteristicsResult realtimeDataCharacteristic = service.GetCharacteristicsForUuid(realtimeDataCharacteristicUuid);
+
+                    if (realtimeDataCharacteristic.Status == GattCommunicationStatus.Success)
+                    {
+                        foreach (GattCharacteristic gc in realtimeDataCharacteristic.Characteristics)
+                        {
+                            GattReadResult value = gc.ReadValue();
+
+                            if (value != null)
+                            {
+                                var sensorReading = _miFloraService.GetSensorReading(value.Value);
+
+                                Debug.WriteLine(sensorReading.ToString());
+                            }
                         }
                     }
                 }
             }
-            return result;
         }
     }
 }
