@@ -24,22 +24,12 @@ namespace greenguard_hub.Services.MiFlora
             return false;
         }
 
-        /// <summary>
-        /// Battery level is stored in the first hex
-        /// </summary>
-        /// <param name="value"></param>
-        /// <returns>Battery level</returns>
         public int GetBatteryLevel(Buffer value)
         {
             DataReader rdr = DataReader.FromBuffer(value);
             return rdr.ReadByte();
         }
 
-        /// <summary>
-        /// Firmware version is stored by an offset of 2 till the end (as ASCII)
-        /// </summary>
-        /// <param name="value"></param>
-        /// <returns>Firmware version</returns>
         public string GetFirmwareVersion(Buffer value)
         {
             DataReader rdr = DataReader.FromBuffer(value);
@@ -48,11 +38,6 @@ namespace greenguard_hub.Services.MiFlora
             return rdr.ReadString(value.Length - 2);
         }
 
-        /// <summary>
-        /// Get the real-time entry from the buffer
-        /// </summary>
-        /// <param name="value"></param>
-        /// <returns></returns>
         public MiFloraSensorReading GetSensorReading(Buffer value)
         {
             DataReader rdr = DataReader.FromBuffer(value);

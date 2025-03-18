@@ -1,0 +1,13 @@
+{
+   "serialport":"COM7",
+   "files": [
+      {         
+         "DestinationFilePath": "I:\\beer.min.js",
+         "SourceFilePath": ".\\beer.min.js"
+      },
+      {         
+         "DestinationFilePath": "I:\\beer.min.css",
+         "SourceFilePath": ".\\beer.min.css"
+      }
+   ]
+}
