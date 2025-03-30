@@ -9,18 +9,17 @@ namespace greenguard_hub.Services
 {
     public class HealthCheckBackgroundService : BackgroundService
     {
-        private readonly GreenGuardHttpClient _greenGuardHttpClient = new();
-
         protected override void ExecuteAsync(CancellationToken stoppingToken)
         {
             var configurationStore = new ConfigurationStore();
             var configuration = configurationStore.GetConfig();
+            var greenGuardHttpClient = new GreenGuardHttpClient(Wifi.GetCurrentIPAddress());
 
             while (!stoppingToken.IsCancellationRequested)
             {
                 if (Wifi.IsEnabled())
                 {
-                    _greenGuardHttpClient.SendHealthCheck(configuration.GreenguardEndpoint, configuration.Id, Wifi.GetCurrentIPAddress());
+                    greenGuardHttpClient.SendHealthCheck(configuration.GreenguardEndpoint, configuration.Id);
                 }
 
                 Thread.Sleep(30_000);
