@@ -20,7 +20,7 @@ namespace greenguard_hub.Services
             {
                 if (Wifi.IsEnabled())
                 {
-                    _greenGuardHttpClient.SendHealthCheck(configuration.GreenguardEndpoint, configuration.Id);
+                    _greenGuardHttpClient.SendHealthCheck(configuration.GreenguardEndpoint, configuration.Id, Wifi.GetCurrentIPAddress());
                 }
 
                 Thread.Sleep(30_000);

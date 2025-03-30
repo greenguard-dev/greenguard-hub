@@ -7,11 +7,13 @@ namespace greenguard_hub_client
     {
         static readonly HttpClient _httpClient = new();
 
-        public void SendHealthCheck(string endpoint, string hubId)
+        public void SendHealthCheck(string endpoint, string hubId, string ip)
         {
             try
             {
                 var path = endpoint + "/api/hubs/" + hubId + "/health";
+
+                _httpClient.DefaultRequestHeaders.Add("x-greenguard-hub-ip", ip);
                 using var response = _httpClient.Get(path);
                 response.EnsureSuccessStatusCode();
             }
