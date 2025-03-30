@@ -2,12 +2,14 @@ using greenguard_hub.Services.MiFlora;
 using Microsoft.Extensions.DependencyInjection;
 using System.Threading;
 using System;
-using nanoFramework.WebServer;
 using greenguard_hub.Services;
 using greenguard_hub.Controller;
-using nanoFramework.Hosting;
 using greenguard_hub.Services.Wireless;
 using System.Diagnostics;
+using greenguard_hub.Services.Device;
+using greenguard_hub.Services.Configuration;
+using Microsoft.Extensions.Hosting;
+using nanoFramework.WebServer;
 
 namespace greenguard_hub
 {
@@ -15,45 +17,52 @@ namespace greenguard_hub
     {
         public static void Main()
         {
-            var serviceProvider = ConfigureServices();
-            Type[] controllers;
+            IHost host = CreateHostBuilder().Build();
+            var configurationStore = new ConfigurationStore();
 
             if (!Wifi.IsEnabled())
             {
-                Debug.WriteLine("Wifi is not enabled");
-                AccessPoint.SetWifiAp();
+                var configuration = configurationStore.GetConfig();
+                var ssid = configuration.WifiSsid;
+                var password = configuration.WifiPassword;
 
-                controllers = new Type[] { typeof(AccessPointController) };
+                var success = Wifi.Configure(ssid, password);
+
+                if (success)
+                {
+                    Debug.WriteLine("Connected to Wifi (" + Wifi.GetCurrentIPAddress() + ")");
+                }
+                else
+                {
+                    Debug.WriteLine("Could not connect to Wifi");
+                }
             }
             else
             {
                 if (Wifi.Connect())
                 {
-                    Debug.WriteLine("Connected to Wifi");
-                    controllers = new Type[] { typeof(GreenGuardController) };
+                    Debug.WriteLine("Connected to Wifi (" + Wifi.GetCurrentIPAddress() + ")");
                 }
                 else
                 {
                     Debug.WriteLine("Could not connect to Wifi");
-                    Debug.WriteLine("Falling back to AccessPoint");
-                    AccessPoint.SetWifiAp();
-                    controllers = new Type[] { typeof(AccessPointController) };
                 }
             }
 
-            using var webServer = new GreenGuardWebserver(80, HttpProtocol.Http, controllers, serviceProvider);
+            using var webServer = new GreenGuardWebserver(80, HttpProtocol.Http, new Type[] { typeof(GreenGuardController) }, host.Services);
 
             webServer.Start();
 
-            Thread.Sleep(Timeout.Infinite);
+            host.Run();
         }
 
-        private static ServiceProvider ConfigureServices()
-        {
-            return new ServiceCollection()
-                .AddSingleton(typeof(MiFloraService))
-                .AddHostedService(typeof(MiFloraMonitorService))
-                .BuildServiceProvider();
-        }
+        public static IHostBuilder CreateHostBuilder() =>
+            Host.CreateDefaultBuilder()
+                .ConfigureServices(services =>
+                {
+                    services.AddSingleton(typeof(DeviceScanner));
+                    services.AddSingleton(typeof(MiFloraService));
+                    services.AddHostedService(typeof(HealthCheckBackgroundService));
+                });
     }
 }

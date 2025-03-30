@@ -50,7 +50,7 @@ namespace greenguard_hub.Services.Wireless
             wa.Disconnect();
 
             CancellationTokenSource cs = new(30_000);
-            Debug.WriteLine("Trying to connect DHCP");
+            Debug.WriteLine("Trying to connect to: " + ssid);
             WifiNetworkHelper.Disconnect();
 
             // Reconfigure properly the normal wifi

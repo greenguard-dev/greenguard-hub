@@ -2,7 +2,6 @@
 using nanoFramework.WebServer;
 using System;
 using System.Net;
-using System.Text;
 
 namespace greenguard_hub.Services
 {
