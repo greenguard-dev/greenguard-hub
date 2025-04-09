@@ -1,29 +1,43 @@
-﻿using greenguard_hub.Services.Configuration;
+﻿using greenguard_hub.Services.Mqtt;
 using greenguard_hub.Services.Wireless;
-using greenguard_hub_client;
 using Microsoft.Extensions.Hosting;
+using nanoFramework.Json;
 using System.Threading;
-
 
 namespace greenguard_hub.Services
 {
     public class HealthCheckBackgroundService : BackgroundService
     {
+        private readonly MqttService _mqttService;
+
+        public HealthCheckBackgroundService(MqttService mqttService)
+        {
+            _mqttService = mqttService;
+        }
+
         protected override void ExecuteAsync(CancellationToken stoppingToken)
         {
-            var configurationStore = new ConfigurationStore();
-            var configuration = configurationStore.GetConfig();
-            var greenGuardHttpClient = new GreenGuardHttpClient(Wifi.GetCurrentIPAddress());
+            var ipAddress = Wifi.GetCurrentIPAddress();
 
             while (!stoppingToken.IsCancellationRequested)
             {
                 if (Wifi.IsEnabled())
                 {
-                    greenGuardHttpClient.SendHealthCheck(configuration.GreenguardEndpoint, configuration.Id);
+                    var healthCheckMessageJson = JsonSerializer.SerializeObject(new HealthCheckMessage
+                    {
+                        IpAddress = ipAddress
+                    });
+
+                    _mqttService.Publish("healthcheck", healthCheckMessageJson);
                 }
 
-                Thread.Sleep(30_000);
+                Thread.Sleep(60_000);
             }
+        }
+
+        private class HealthCheckMessage
+        {
+            public string IpAddress { get; set; }
         }
     }
 }

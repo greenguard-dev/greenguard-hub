@@ -1,5 +1,4 @@
-﻿
-namespace greenguard_hub.Services.Configuration
+﻿namespace greenguard_hub.Services.Configuration
 {
     public class Configuration
     {

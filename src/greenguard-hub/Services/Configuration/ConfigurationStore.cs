@@ -19,9 +19,9 @@ namespace greenguard_hub.Services.Configuration
 
         public Configuration GetConfig()
         {
-            var json = new FileStream(ConfigFile, FileMode.Open);
+            var json = new FileStream(ConfigFile, FileMode.Open, FileAccess.ReadWrite);
             Configuration config = (Configuration)JsonConvert.DeserializeObject(json, typeof(Configuration));
-
+            json.Dispose();
             return config;
         }
 

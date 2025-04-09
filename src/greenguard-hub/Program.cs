@@ -1,15 +1,12 @@
 using greenguard_hub.Services.MiFlora;
 using Microsoft.Extensions.DependencyInjection;
-using System.Threading;
-using System;
 using greenguard_hub.Services;
-using greenguard_hub.Controller;
 using greenguard_hub.Services.Wireless;
 using System.Diagnostics;
 using greenguard_hub.Services.Device;
 using greenguard_hub.Services.Configuration;
 using Microsoft.Extensions.Hosting;
-using nanoFramework.WebServer;
+using greenguard_hub.Services.Mqtt;
 
 namespace greenguard_hub
 {
@@ -19,10 +16,10 @@ namespace greenguard_hub
         {
             IHost host = CreateHostBuilder().Build();
             var configurationStore = new ConfigurationStore();
+            var configuration = configurationStore.GetConfig();
 
             if (!Wifi.IsEnabled())
             {
-                var configuration = configurationStore.GetConfig();
                 var ssid = configuration.WifiSsid;
                 var password = configuration.WifiPassword;
 
@@ -49,10 +46,6 @@ namespace greenguard_hub
                 }
             }
 
-            using var webServer = new GreenGuardWebserver(80, HttpProtocol.Http, new Type[] { typeof(GreenGuardController) }, host.Services);
-
-            webServer.Start();
-
             host.Run();
         }
 
@@ -62,6 +55,7 @@ namespace greenguard_hub
                 {
                     services.AddSingleton(typeof(DeviceScanner));
                     services.AddSingleton(typeof(MiFloraService));
+                    services.AddSingleton(typeof(MqttService));
                     services.AddHostedService(typeof(HealthCheckBackgroundService));
                 });
     }
